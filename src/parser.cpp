@@ -1,0 +1,245 @@
+#include "parser.hpp"
+#include <stdexcept>
+#include "nodes/number_node.hpp"
+#include "nodes/string_node.hpp"
+#include "nodes/unary_node.hpp"
+#include "nodes/binary_node.hpp"
+#include "nodes/put_node.hpp"
+#include "nodes/assign_node.hpp"
+#include "nodes/access_node.hpp"
+#include "nodes/block_node.hpp"
+
+#include <iostream>
+
+Parser::Parser(std::vector<Token>* tokens) : tokens(*tokens), current_token(nullptr), index(0) {}
+
+Node* Parser::parse()
+{
+  current_token = &tokens[index];
+
+  Node* node = parse_block();
+
+  if (node == nullptr)
+  {
+    throw std::runtime_error("Unexpected token: " + current_token->as_string());
+  }
+
+  return node;
+}
+
+void Parser::advance()
+{
+  current_token = &tokens[++index];  
+}
+
+Node* Parser::parse_atom()
+{
+  if (current_token->matches(Token::Type::Number))
+  {
+    Node* node = new NumberNode(std::get<double>(current_token->value.value()), current_token->position.copy());
+    advance();
+    return node;
+  }
+  else if (current_token->matches(Token::Type::String))
+  {
+    Node* node = new StringNode(std::get<std::string>(current_token->value.value()), current_token->position.copy());
+    advance();
+    return node;
+  }
+  else if (current_token->matches(Token::Type::LParen))
+  {
+    advance();
+    Node* node = parse_expr();
+
+    if (!current_token->matches(Token::Type::RParen))
+    {
+      throw std::runtime_error("Expected ')', got: " + current_token->as_string());
+    }
+
+    advance();
+    return node;
+  }
+  else if (current_token->matches(Token::Type::Identifier))
+  {
+    const Token* var_name = current_token;
+    advance();
+
+    if (current_token->matches(Token::Type::Assign))
+    {
+      advance();
+      Node* right = parse_expr();
+      return new AssignNode(var_name, right, var_name->position.copy(), current_token->position.copy());
+    }
+
+    return new AccessNode(var_name, var_name->position.copy(), current_token->position.copy());
+  }
+  else
+  {
+    throw std::runtime_error("Unexpected token: " + current_token->as_string());
+  }
+}
+
+Node* Parser::parse_unary()
+{
+  bool is_not = current_token->matches(Token::Type::Not);
+
+  if (current_token->matches(Token::Type::Plus) || current_token->matches(Token::Type::Minus) || is_not)
+  {
+    Position pos_start = current_token->position.copy();
+    const Token* op_token = current_token;
+    advance();
+    Node* node;
+    
+    if (is_not)
+    {
+      node = parse_comp();
+    }
+    else
+    {
+      node = parse_unary();
+    }
+
+    return new UnaryNode(op_token, node, pos_start, current_token->position.copy());
+  }
+
+  return parse_power();
+}
+
+Node* Parser::parse_power()
+{
+  Node* left = parse_atom();
+
+  if (current_token->matches(Token::Type::Pow))
+  {
+    Position pos_start = current_token->position.copy();
+    const Token* op_token = current_token;
+    advance();
+    Node* right = parse_unary();
+    return new BinaryNode(op_token, left, right, pos_start, current_token->position.copy());
+  }
+
+  return left;
+}
+
+Node* Parser::parse_term()
+{
+  Node* left = parse_unary();
+
+  while (
+    current_token->matches(Token::Type::Multiply) ||
+    current_token->matches(Token::Type::Divide) ||
+    current_token->matches(Token::Type::Modulo)
+  )
+  {
+    Position pos_start = current_token->position.copy();
+    const Token* op_token = current_token;
+    advance();
+    Node* right = parse_unary();
+    left = new BinaryNode(op_token, left, right, pos_start, current_token->position.copy());
+  }
+
+  return left;
+}
+
+Node* Parser::parse_arith()
+{
+  Node* left = parse_term();
+
+  while (
+    current_token->matches(Token::Type::Plus) ||
+    current_token->matches(Token::Type::Minus)
+  )
+  {
+    Position pos_start = current_token->position.copy();
+    const Token* op_token = current_token;
+    advance();
+    Node* right = parse_term();
+    left = new BinaryNode(op_token, left, right, pos_start, current_token->position.copy());
+  }
+
+  return left;
+}
+
+Node* Parser::parse_comp()
+{
+  Node* left = parse_arith();
+
+  while (
+    current_token->matches(Token::Type::Equals) ||
+    current_token->matches(Token::Type::NotEquals) ||
+    current_token->matches(Token::Type::GreaterThan) ||
+    current_token->matches(Token::Type::LessThan) ||
+    current_token->matches(Token::Type::GreaterThanOrEqual) ||
+    current_token->matches(Token::Type::LessThanOrEqual)
+  )
+  {
+    Position pos_start = current_token->position.copy();
+    const Token* op_token = current_token;
+    advance();
+    Node* right = parse_arith();
+    left = new BinaryNode(op_token, left, right, pos_start, current_token->position.copy());
+  }
+
+  return left;
+}
+
+Node* Parser::parse_expr()
+{
+  Node* left = parse_comp();
+
+  while (
+    current_token->matches(Token::Type::And) ||
+    current_token->matches(Token::Type::Or)
+  )
+  {
+    Position pos_start = current_token->position.copy();
+    const Token* op_token = current_token;
+    advance();
+    Node* right = parse_comp();
+    left = new BinaryNode(op_token, left, right, pos_start, current_token->position.copy());
+  }
+
+  return left;
+}
+
+Node* Parser::parse_statement()
+{
+  if (current_token->matches(Token::Type::Keyword, "put"))
+  {
+    advance();
+    Node* expr = parse_expr();
+
+    if (!current_token->matches(Token::Type::End))
+    {
+      throw std::runtime_error("Expected ';' got: " + current_token->as_string());
+    }
+
+    advance();
+
+    return new PutNode(expr, expr->pos_start, current_token->position.copy());
+  }
+
+  Node* expr = parse_expr();
+
+  if (!current_token->matches(Token::Type::End))
+  {
+    throw std::runtime_error("Expected ';' got: " + current_token->as_string());
+  }
+
+  advance();
+
+  return expr;
+}
+
+Node* Parser::parse_block()
+{
+  std::vector<Node*> nodes;
+
+  while (!current_token->matches(Token::Type::RBrace) && !current_token->matches(Token::Type::Eof))
+  {
+    Node* node = parse_statement();
+    nodes.push_back(node);
+  }
+
+  return new BlockNode(nodes, nodes[0]->pos_start, nodes[nodes.size() - 1]->pos_end);
+}
