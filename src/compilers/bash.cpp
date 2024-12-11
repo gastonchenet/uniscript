@@ -25,7 +25,7 @@ Value BashCompiler::visit(NumberNode* node, int depth)
 Value BashCompiler::visit(StringNode* node, int depth)
 {
   depth++;
-  return Value(Value::Type::String, node->value);
+  return Value(Value::Type::String, "\"" + node->value + "\"");
 }
 
 Value BashCompiler::visit(UnaryNode* node, int depth)
@@ -163,7 +163,14 @@ Value BashCompiler::visit(AssignNode* node, int depth)
 Value BashCompiler::visit(AccessNode* node, int depth)
 {
   depth++;
-  Value var = symbol_table[std::get<std::string>(node->token->value.value())];
+  std::string var_name = std::get<std::string>(node->token->value.value());
+  Value var = symbol_table[var_name];
+
+  if (var.type == Value::Type::Void)
+  {
+    throw std::runtime_error("Variable not found: " + var_name);
+  }
+
   return Value(var.type, "${" + var.content + '}');
 }
 

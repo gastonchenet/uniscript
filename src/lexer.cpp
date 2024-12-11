@@ -52,9 +52,7 @@ std::vector<Token> Lexer::tokenize()
     }
     else if (current_char == '-')
     {
-      Token token = Token(Token::Type::Minus, position.copy());
-      tokens.push_back(token);
-      position.advance(current_char);
+      make_minus_or_comment();
     }
     else if (current_char == '*')
     {
@@ -337,6 +335,27 @@ void Lexer::make_less_than_or_less_than_equals()
   else
   {
     Token token = Token(Token::Type::LessThan, position.copy());
+    tokens.push_back(token);
+  }
+}
+
+void Lexer::make_minus_or_comment()
+{
+  char current_char = code[position.index];
+  position.advance(current_char);
+  current_char = code[position.index];
+
+  if (current_char == '-')
+  {
+    while (current_char != '\n')
+    {
+      position.advance(current_char);
+      current_char = code[position.index];
+    }
+  }
+  else
+  {
+    Token token = Token(Token::Type::Minus, position.copy());
     tokens.push_back(token);
   }
 }

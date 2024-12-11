@@ -27,4 +27,5 @@ public:
   void make_equals_or_assign();
   void make_greater_than_or_greater_than_equals();
   void make_less_than_or_less_than_equals();
+  void make_minus_or_comment();
 };

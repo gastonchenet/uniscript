@@ -6,6 +6,8 @@
 #include "parser.hpp"
 #include "nodes/node.hpp"
 #include "compilers/bash.hpp"
+#include "compilers/powershell.hpp"
+#include "parse_args.hpp"
 
 std::string read_file(const std::string* filename) {
   std::ifstream file(*filename);
@@ -20,34 +22,37 @@ void write_file(const std::string* filename, const std::string* content) {
 
 int main(int argc, char** argv)
 {
-  if (argc != 2)
-  {
-    std::cerr << "Usage: " << argv[0] << " <filename>" << std::endl;
-    return 1;
-  }
+  Args args = parse_args(argc, argv);
 
-  std::string in = argv[1];
-  std::string out = "out.sh";
-
-  std::string code = read_file(&in);
+  std::string out_bash = args.output_file + ".sh";
+  std::string out_powershell = args.output_file + ".ps1";
+  std::string code = read_file(&args.input_file);
 
   Lexer lexer = Lexer(code);
   std::vector<Token> tokens = lexer.tokenize();
 
-  // for (Token token : tokens)
-  // {
-  //   std::cout << token.as_string() << std::endl;
-  // }
+  if (tokens[0].matches(Token::Type::Eof))
+  {
+    std::cerr << "Error: empty file" << std::endl;
+    exit(1);
+  }
 
   Parser parser = Parser(&tokens);
   Node* node = parser.parse();
 
-  std::cout << node->as_string() << std::endl;
+  if (args.bash)
+  {
+    BashCompiler compiler = BashCompiler(node);
+    std::string compiled = compiler.compile();
+    write_file(&out_bash, &compiled);
+  }
 
-  BashCompiler compiler = BashCompiler(node);
-  std::string compiled = compiler.compile();
-
-  write_file(&out, &compiled);
+  if (args.powershell)
+  {
+    PowershellCompiler compiler = PowershellCompiler(node);
+    std::string compiled = compiler.compile();
+    write_file(&out_powershell, &compiled);
+  }
 
   return 0;
 }
