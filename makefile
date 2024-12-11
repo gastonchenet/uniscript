@@ -9,7 +9,9 @@ OBJ_FILES := $(patsubst $(SRC_DIR)/%.cpp, $(BUILD_DIR)/%.o, $(SRC_FILES))
 
 TARGET := main
 
-all: $(TARGET)
+all: build
+
+build: $(TARGET)
 
 $(TARGET): $(OBJ_FILES)
 	$(CXX) $(CXXFLAGS) -o $@ $^
@@ -18,7 +20,7 @@ $(BUILD_DIR)/%.o: $(SRC_DIR)/%.cpp
 	@mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-clean:
+clean :
 	rm -rf $(BUILD_DIR) $(TARGET)
 
 rebuild: clean all
