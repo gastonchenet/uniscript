@@ -8,6 +8,7 @@
 #include "nodes/assign_node.hpp"
 #include "nodes/access_node.hpp"
 #include "nodes/block_node.hpp"
+#include "nodes/if_node.hpp"
 
 #include <iostream>
 
@@ -219,6 +220,11 @@ Node* Parser::parse_statement()
     return new PutNode(expr, expr->pos_start, current_token->position.copy());
   }
 
+  if (current_token->matches(Token::Type::Keyword, "if"))
+  {
+    return parse_if();
+  }
+
   Node* expr = parse_expr();
 
   if (!current_token->matches(Token::Type::End))
@@ -242,4 +248,57 @@ Node* Parser::parse_block()
   }
 
   return new BlockNode(nodes, nodes[0]->pos_start, nodes[nodes.size() - 1]->pos_end);
+}
+
+Node* Parser::parse_if()
+{
+  if (!current_token->matches(Token::Type::Keyword, "if"))
+  {
+    throw std::runtime_error("Expected 'if' got: " + current_token->as_string());
+  }
+
+  Position pos_start = current_token->position.copy();
+  advance();
+
+  Node* condition = parse_expr();
+
+  if (!current_token->matches(Token::Type::LBrace))
+  {
+    throw std::runtime_error("Expected '{' got: " + current_token->as_string());
+  }
+
+  advance();
+
+  Node* body = parse_block();
+  Node* else_body = nullptr;
+
+  if (!current_token->matches(Token::Type::RBrace))
+  {
+    throw std::runtime_error("Expected '}' got: " + current_token->as_string());
+  }
+
+  advance();
+
+  if (current_token->matches(Token::Type::Keyword, "else"))
+  {
+    advance();
+
+    if (!current_token->matches(Token::Type::LBrace))
+    {
+      throw std::runtime_error("Expected '{' got: " + current_token->as_string());
+    }
+
+    advance();
+
+    else_body = parse_block();
+
+    if (!current_token->matches(Token::Type::RBrace))
+    {
+      throw std::runtime_error("Expected '}' got: " + current_token->as_string());
+    }
+
+    advance();
+  }
+
+  return new IfNode(condition, body, else_body, pos_start, current_token->position.copy());
 }

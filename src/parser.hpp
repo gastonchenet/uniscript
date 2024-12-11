@@ -30,4 +30,5 @@ private:
   Node* parse_expr();
   Node* parse_statement();
   Node* parse_block();
+  Node* parse_if();
 };

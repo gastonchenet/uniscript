@@ -24,6 +24,7 @@ Value Compiler::visit(Node* node)
   if (auto accessNode = dynamic_cast<AccessNode*>(node))     return visit(accessNode);
   if (auto putNode = dynamic_cast<PutNode*>(node))           return visit(putNode);
   if (auto blockNode = dynamic_cast<BlockNode*>(node))       return visit(blockNode);
+  if (auto ifNode = dynamic_cast<IfNode*>(node))             return visit(ifNode);
 
   throw std::runtime_error("Unknown node type");
 }

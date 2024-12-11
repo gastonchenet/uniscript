@@ -13,6 +13,7 @@ protected:
   Value visit(AccessNode*) override;
   Value visit(PutNode*) override;
   Value visit(BlockNode*) override;
+  Value visit(IfNode*) override;
 
 public:
   BashCompiler(Node*);

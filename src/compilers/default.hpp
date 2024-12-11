@@ -14,6 +14,7 @@
 #include "../nodes/assign_node.hpp"
 #include "../nodes/access_node.hpp"
 #include "../nodes/block_node.hpp"
+#include "../nodes/if_node.hpp"
 
 struct Compiler
 {
@@ -36,6 +37,7 @@ protected:
   virtual Value visit(AccessNode*) = 0;
   virtual Value visit(PutNode*) = 0;
   virtual Value visit(BlockNode*) = 0;
+  virtual Value visit(IfNode*) = 0;
 
 public:
   virtual ~Compiler() = default;

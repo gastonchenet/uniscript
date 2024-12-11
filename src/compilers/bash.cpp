@@ -79,7 +79,43 @@ Value BashCompiler::visit(BinaryNode* node)
       break;
 
     case Token::Type::Modulo:
-      result += '%';
+      result += '%'; 
+      break;
+
+    case Token::Type::Pow:
+      result += '^';
+      break;
+
+    case Token::Type::LessThan:
+      result += '<';
+      break;
+
+    case Token::Type::LessThanOrEqual:
+      result += "<=";
+      break;
+
+    case Token::Type::GreaterThan:
+      result += '>';
+      break;
+
+    case Token::Type::GreaterThanOrEqual:
+      result += ">=";
+      break;
+
+    case Token::Type::Equals:
+      result += "==";
+      break;
+
+    case Token::Type::NotEquals:
+      result += "!=";
+      break;
+
+    case Token::Type::And:
+      result += "&&";
+      break;
+
+    case Token::Type::Or:
+      result += "||";
       break;
     
     default:
@@ -87,7 +123,7 @@ Value BashCompiler::visit(BinaryNode* node)
     }
 
     result += right_v.content;
-    result += "\"|bc)";
+    result += "\"|bc -l)";
 
     return Value(Value::Type::Number, result);
   }
@@ -105,15 +141,26 @@ Value BashCompiler::visit(AssignNode* node)
 {
   Value result = Compiler::visit(node->right);
   std::string var_name = std::get<std::string>(node->left->value.value());
-  std::string var = new_var();
-  symbol_table[var_name] = Value(result.type, "${" + var + '}');
+  std::string var;
+
+  if (symbol_table.find(var_name) != symbol_table.end())
+  {
+    var = symbol_table[var_name].content;
+  }
+  else
+  {
+    var = new_var();
+  }
+
+  symbol_table[var_name] = Value(result.type, var);
   output_s += var + "=" + result.content + "\n";
   return Value();
 }
 
 Value BashCompiler::visit(AccessNode* node)
 {
-  return symbol_table[std::get<std::string>(node->token->value.value())];
+  Value var = symbol_table[std::get<std::string>(node->token->value.value())];
+  return Value(var.type, "${" + var.content + '}');
 }
 
 Value BashCompiler::visit(PutNode* node)
@@ -130,5 +177,21 @@ Value BashCompiler::visit(BlockNode* node)
     Value result = Compiler::visit(child);
   }
 
+  return Value();
+}
+
+Value BashCompiler::visit(IfNode* node)
+{
+  Value condition = Compiler::visit(node->condition);
+  output_s += "if [ " + condition.content + " -ne 0 ]; then\n";
+  Value result = Compiler::visit(node->body);
+
+  if (node->else_body != nullptr)
+  {
+    output_s += "else\n";
+    result = Compiler::visit(node->else_body);
+  }
+
+  output_s += "fi\n";
   return Value();
 }
