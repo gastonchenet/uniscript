@@ -16,6 +16,11 @@ protected:
   Value visit(IfNode*, int) override;
   Value visit(WhileNode*, int) override;
   Value visit(ForNode*, int) override;
+  Value visit(CallNode*, int) override;
+  Value visit(FuncdefNode*, int) override;
+  Value visit(BreakNode*, int) override;
+  Value visit(ContinueNode*, int) override;
+  Value visit(ReturnNode*, int) override;
 
 public:
   PowershellCompiler(Node*);

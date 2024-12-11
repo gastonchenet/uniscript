@@ -17,6 +17,11 @@
 #include "../nodes/if_node.hpp"
 #include "../nodes/while_node.hpp"
 #include "../nodes/for_node.hpp"
+#include "../nodes/call_node.hpp"
+#include "../nodes/funcdef_node.hpp"
+#include "../nodes/break_node.hpp"
+#include "../nodes/continue_node.hpp"
+#include "../nodes/return_node.hpp"
 
 struct Compiler
 {
@@ -42,6 +47,11 @@ protected:
   virtual Value visit(IfNode*, int) = 0;
   virtual Value visit(WhileNode*, int) = 0;
   virtual Value visit(ForNode*, int) = 0;
+  virtual Value visit(CallNode*, int) = 0;
+  virtual Value visit(FuncdefNode*, int) = 0;
+  virtual Value visit(BreakNode*, int) = 0;
+  virtual Value visit(ContinueNode*, int) = 0;
+  virtual Value visit(ReturnNode*, int) = 0;
 
 public:
   virtual ~Compiler() = default;

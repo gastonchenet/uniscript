@@ -25,7 +25,6 @@ public:
     RParen,
     LBrace,
     RBrace,
-    End,
     Identifier,
     Keyword,
     Assign,
@@ -36,6 +35,8 @@ public:
     LessThan,
     GreaterThanOrEqual,
     LessThanOrEqual,
+    Comma,
+    End,
     Eof
   };
 

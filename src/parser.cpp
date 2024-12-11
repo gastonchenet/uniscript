@@ -11,6 +11,11 @@
 #include "nodes/if_node.hpp"
 #include "nodes/while_node.hpp"
 #include "nodes/for_node.hpp"
+#include "nodes/funcdef_node.hpp"
+#include "nodes/call_node.hpp"
+#include "nodes/return_node.hpp"
+#include "nodes/break_node.hpp"
+#include "nodes/continue_node.hpp"
 
 #include <iostream>
 
@@ -37,9 +42,20 @@ void Parser::advance()
 
 Node* Parser::parse_atom()
 {
+  bool is_true;
+
   if (current_token->matches(Token::Type::Number))
   {
     Node* node = new NumberNode(std::get<double>(current_token->value.value()), current_token->position.copy());
+    advance();
+    return node;
+  }
+  else if (
+    (is_true = current_token->matches(Token::Type::Keyword, "true")) ||
+    current_token->matches(Token::Type::Keyword, "false")
+  )
+  {
+    Node* node = new NumberNode(is_true, current_token->position.copy());
     advance();
     return node;
   }
@@ -72,6 +88,29 @@ Node* Parser::parse_atom()
       advance();
       Node* right = parse_expr();
       return new AssignNode(var_name, right, var_name->position.copy(), current_token->position.copy());
+    }
+    else if (current_token->matches(Token::Type::LParen))
+    {
+      advance();
+      std::vector<Node*> args;
+
+      while (!current_token->matches(Token::Type::RParen))
+      {
+        Node* arg = parse_expr();
+        args.push_back(arg);
+
+        if (current_token->matches(Token::Type::Comma))
+        {
+          advance();
+        }
+        else if (!current_token->matches(Token::Type::RParen))
+        {
+          throw std::runtime_error("Expected ')' or ',' got: " + current_token->as_string());
+        }
+      }
+
+      advance();
+      return new CallNode(var_name, args, var_name->position.copy(), current_token->position.copy());
     }
 
     return new AccessNode(var_name, var_name->position.copy(), current_token->position.copy());
@@ -237,6 +276,55 @@ Node* Parser::parse_statement()
     return parse_for();
   }
 
+  if (current_token->matches(Token::Type::Keyword, "fn"))
+  {
+    return parse_func();
+  }
+
+  if (current_token->matches(Token::Type::Keyword, "continue"))
+  {
+    advance();
+
+    if (!current_token->matches(Token::Type::End))
+    {
+      throw std::runtime_error("Expected ';' got: " + current_token->as_string());
+    }
+
+    advance();
+
+    return new ContinueNode(current_token->position.copy(), current_token->position.copy());
+  }
+
+  if (current_token->matches(Token::Type::Keyword, "break"))
+  {
+    advance();
+
+    if (!current_token->matches(Token::Type::End))
+    {
+      throw std::runtime_error("Expected ';' got: " + current_token->as_string());
+    }
+
+    advance();
+
+    return new BreakNode(current_token->position.copy(), current_token->position.copy());
+  }
+
+  if (current_token->matches(Token::Type::Keyword, "return"))
+  {
+    advance();
+    Node* expr = parse_expr();
+
+    if (!current_token->matches(Token::Type::End))
+    {
+      throw std::runtime_error("Expected ';' got: " + current_token->as_string());
+    }
+
+    advance();
+
+    return new ReturnNode(expr, expr->pos_start, current_token->position.copy());
+  }
+
+  std::cout << current_token->as_string() << std::endl;
   Node* expr = parse_expr();
 
   if (!current_token->matches(Token::Type::End))
@@ -295,21 +383,28 @@ Node* Parser::parse_if()
   {
     advance();
 
-    if (!current_token->matches(Token::Type::LBrace))
+    if (current_token->matches(Token::Type::LBrace))
+    {
+      advance();
+
+      else_body = parse_block();
+
+      if (!current_token->matches(Token::Type::RBrace))
+      {
+        throw std::runtime_error("Expected '}' got: " + current_token->as_string());
+      }
+
+      advance();
+    }
+    else if (current_token->matches(Token::Type::Keyword, "if"))
+    {
+      else_body = parse_if();
+      else_body = new BlockNode({ else_body }, else_body->pos_start, else_body->pos_end);
+    }
+    else
     {
       throw std::runtime_error("Expected '{' got: " + current_token->as_string());
     }
-
-    advance();
-
-    else_body = parse_block();
-
-    if (!current_token->matches(Token::Type::RBrace))
-    {
-      throw std::runtime_error("Expected '}' got: " + current_token->as_string());
-    }
-
-    advance();
   }
 
   return new IfNode(condition, body, else_body, pos_start, current_token->position.copy());
@@ -406,4 +501,67 @@ Node* Parser::parse_for()
   advance();
 
   return new ForNode(var_name, start, end, step, body, pos_start, current_token->position.copy());
+}
+
+Node* Parser::parse_func()
+{
+  Position pos_start = current_token->position.copy();
+  advance();
+
+  if (!current_token->matches(Token::Type::Identifier))
+  {
+    throw std::runtime_error("Expected identifier got: " + current_token->as_string());
+  }
+
+  const Token* name = current_token;
+  advance();
+
+  if (!current_token->matches(Token::Type::LParen))
+  {
+    throw std::runtime_error("Expected '(' got: " + current_token->as_string());
+  }
+
+  advance();
+
+  std::vector<const Token*> args;
+
+  while (!current_token->matches(Token::Type::RParen))
+  {
+    if (!current_token->matches(Token::Type::Identifier))
+    {
+      throw std::runtime_error("Expected identifier got: " + current_token->as_string());
+    }
+
+    args.push_back(current_token);
+    advance();
+
+    if (current_token->matches(Token::Type::Comma))
+    {
+      advance();
+    }
+    else if (!current_token->matches(Token::Type::RParen))
+    {
+      throw std::runtime_error("Expected ')' or ',' got: " + current_token->as_string());
+    }
+  }
+
+  advance();
+
+  if (!current_token->matches(Token::Type::LBrace))
+  {
+    throw std::runtime_error("Expected '{' got: " + current_token->as_string());
+  }
+
+  advance();
+
+  Node* body = parse_block();
+
+  if (!current_token->matches(Token::Type::RBrace))
+  {
+    throw std::runtime_error("Expected '}' got: " + current_token->as_string());
+  }
+
+  advance();
+
+  return new FuncdefNode(name, args, body, pos_start, current_token->position.copy());
 }

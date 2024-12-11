@@ -2,7 +2,7 @@
 
 #include <string>
 
-size_t KeywordsLength = 7;
+size_t KeywordsLength = 13;
 
 std::string* Keywords = new std::string[KeywordsLength] {
   "if",
@@ -11,5 +11,11 @@ std::string* Keywords = new std::string[KeywordsLength] {
   "for",
   "put",
   "to",
-  "step"
+  "step",
+  "fn",
+  "return",
+  "break",
+  "continue",
+  "true",
+  "false"
 };

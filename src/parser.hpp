@@ -33,4 +33,5 @@ private:
   Node* parse_if();
   Node* parse_while();
   Node* parse_for();
+  Node* parse_func();
 };

@@ -66,67 +66,64 @@ Value BashCompiler::visit(BinaryNode* node, int depth)
     switch (node->op->type)
     {
     case Token::Type::Plus:
-      result += '+';
+      result += '+' + right_v.content + "\"|bc -l)";
       break;
 
     case Token::Type::Minus:
-      result += '-';
+      result += '-' + right_v.content + "\"|bc -l)";
       break;
 
     case Token::Type::Multiply:
-      result += '*';
+      result += '*' + right_v.content + "\"|bc -l)";
       break;
 
     case Token::Type::Divide:
-      result += '/';
+      result += '/' + right_v.content + "\"|bc -l)";
       break;
 
     case Token::Type::Modulo:
-      result += '%'; 
+      result += '%' + right_v.content + "\"|bc)"; 
       break;
 
     case Token::Type::Pow:
-      result += '^';
+      result += '^' + right_v.content + "\"|bc -l)";
       break;
 
     case Token::Type::LessThan:
-      result += '<';
+      result += '<' + right_v.content + "\"|bc -l)";
       break;
 
     case Token::Type::LessThanOrEqual:
-      result += "<=";
+      result += "<=" + right_v.content + "\"|bc -l)";
       break;
 
     case Token::Type::GreaterThan:
-      result += '>';
+      result += '>' + right_v.content + "\"|bc -l)";
       break;
 
     case Token::Type::GreaterThanOrEqual:
-      result += ">=";
+      result += ">=" + right_v.content + "\"|bc -l)";
       break;
 
     case Token::Type::Equals:
-      result += "==";
+      result += "==" + right_v.content + "\"|bc -l)";
       break;
 
     case Token::Type::NotEquals:
-      result += "!=";
+      result += "!=" + right_v.content + "\"|bc -l)";
       break;
 
     case Token::Type::And:
-      result += "&&";
+      result += "&&" + right_v.content + "\"|bc -l)";
       break;
 
     case Token::Type::Or:
-      result += "||";
+      result += "||" + right_v.content + "\"|bc -l)";
       break;
     
     default:
       throw std::runtime_error("Invalid binary operation");
     }
-
-    result += right_v.content;
-    result += "\"|bc -l)";
 
     return Value(Value::Type::Number, result);
   }
@@ -177,7 +174,15 @@ Value BashCompiler::visit(AccessNode* node, int depth)
 Value BashCompiler::visit(PutNode* node, int depth)
 {
   Value result = Compiler::visit(node->expr, depth);
-  output_s += std::string(depth * 2, ' ') + "echo \"" + result.content + "\"\n";
+  output_s += std::string(depth * 2, ' ') + "echo " + result.content;
+
+  if (depth > 0)
+  {
+    output_s += " >&2";
+  }
+
+  output_s += "\n";
+
   return Value();
 }
 
@@ -234,5 +239,63 @@ Value BashCompiler::visit(ForNode* node, int depth)
   Value result = Compiler::visit(node->body, depth);
   output_s += std::string(depth * 2, ' ') + "done\n";
 
+  return Value();
+}
+
+Value BashCompiler::visit(CallNode* node, int depth)
+{
+  std::string name = std::get<std::string>(node->name->value.value());
+  std::string args = "";
+
+  for (Node* arg : node->args)
+  {
+    Value result = Compiler::visit(arg, depth);
+    args += ' ' + result.content;
+  }
+
+  return Value(Value::Type::String, "$(" + name + args + ")");
+}
+
+Value BashCompiler::visit(FuncdefNode* node, int depth)
+{
+  std::string name = std::get<std::string>(node->name->value.value());
+  output_s += name + "() {\n";
+  
+  std::vector<const Token*> args = node->args;
+  std::string tab = std::string((depth + 1) * 2, ' ');
+  std::string var_name, var;
+
+  for (size_t i = 0; i < args.size(); i++)
+  {
+    var_name = std::get<std::string>(args[i]->value.value());
+    var = new_var();
+    symbol_table[var_name] = Value(Value::Type::Number, var);
+    output_s += tab + var + "=$" + std::to_string(i + 1) + "\n";
+  }
+
+  Value result = Compiler::visit(node->body, depth);
+  output_s += "}\n";
+
+  return Value();
+}
+
+Value BashCompiler::visit(BreakNode* node, int depth)
+{
+  node = node;
+  output_s += std::string(depth * 2, ' ') + "break\n";
+  return Value();
+}
+
+Value BashCompiler::visit(ContinueNode* node, int depth)
+{
+  node = node;
+  output_s += std::string(depth * 2, ' ') + "continue\n";
+  return Value();
+}
+
+Value BashCompiler::visit(ReturnNode* node, int depth)
+{
+  Value result = Compiler::visit(node->node, depth);
+  output_s += std::string(depth * 2, ' ') + "echo " + result.content + "\n" + std::string(depth * 2, ' ') + "exit\n";
   return Value();
 }

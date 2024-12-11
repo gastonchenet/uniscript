@@ -2,6 +2,8 @@
 #include <stdexcept>
 #include "keywords.hpp"
 
+#include <iostream>
+
 Lexer::Lexer(const std::string& code) : code(code), position(Position()) {}
 
 std::vector<Token> Lexer::tokenize()
@@ -37,6 +39,12 @@ std::vector<Token> Lexer::tokenize()
     else if (current_char == ';')
     {
       Token token = Token(Token::Type::End, position.copy());
+      tokens.push_back(token);
+      position.advance(current_char);
+    }
+    else if (current_char == ',')
+    {
+      Token token = Token(Token::Type::Comma, position.copy());
       tokens.push_back(token);
       position.advance(current_char);
     }
@@ -347,7 +355,7 @@ void Lexer::make_minus_or_comment()
 
   if (current_char == '-')
   {
-    while (current_char != '\n')
+    while (current_char != '\n' && current_char != '\0')
     {
       position.advance(current_char);
       current_char = code[position.index];

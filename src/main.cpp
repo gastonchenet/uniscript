@@ -28,6 +28,7 @@ int main(int argc, char** argv)
   std::string out_powershell = args.output_file + ".ps1";
   std::string code = read_file(&args.input_file);
 
+
   Lexer lexer = Lexer(code);
   std::vector<Token> tokens = lexer.tokenize();
 

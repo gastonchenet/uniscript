@@ -191,3 +191,68 @@ Value PowershellCompiler::visit(ForNode* node, int depth)
   output_s += std::string(depth * 2, ' ') + "}\n";
   return Value();
 }
+
+Value PowershellCompiler::visit(CallNode* node, int depth)
+{
+  depth++;
+  std::string name = std::get<std::string>(node->name->value.value());
+  std::string args = "";
+
+  for (Node* arg : node->args)
+  {
+    Value result = Compiler::visit(arg, depth);
+    args += ' ' + result.content;
+  }
+
+  return Value(Value::Type::String, "(" + name + args + ")");
+}
+
+Value PowershellCompiler::visit(FuncdefNode* node, int depth)
+{
+  std::string name = std::get<std::string>(node->name->value.value());
+  std::string args = "";
+  std::vector<const Token*> arg_names = node->args;
+
+  for (size_t i = 0; i < arg_names.size(); i++)
+  {
+    const Token* arg = arg_names[i];
+    std::string var_name = std::get<std::string>(arg->value.value());
+    std::string var = new_var();
+    symbol_table[var_name] = Value(Value::Type::Number, var);
+    args += "[Parameter(Position=" + std::to_string(i) + ")]$" + var + ",";
+  }
+
+  output_s += std::string(depth * 2, ' ') + "function " + name + " {\n";
+
+  if (args.size() > 0)
+  {
+    args.pop_back();
+    output_s += std::string((depth + 1) * 2, ' ') + "param(" + args + ")\n";
+  }
+
+  Compiler::visit(node->body, depth);
+  output_s += std::string(depth * 2, ' ') + "}\n";
+
+  return Value();
+}
+
+Value PowershellCompiler::visit(BreakNode* node, int depth)
+{
+  node = node;
+  output_s += std::string(depth * 2, ' ') + "break\n";
+  return Value();
+}
+
+Value PowershellCompiler::visit(ContinueNode* node, int depth)
+{
+  node = node;
+  output_s += std::string(depth * 2, ' ') + "continue\n";
+  return Value();
+}
+
+Value PowershellCompiler::visit(ReturnNode* node, int depth)
+{
+  Value result = Compiler::visit(node->node, depth);
+  output_s += std::string(depth * 2, ' ') + "return " + result.content + "\n";
+  return Value();
+}
