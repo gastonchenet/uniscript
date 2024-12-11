@@ -324,7 +324,6 @@ Node* Parser::parse_statement()
     return new ReturnNode(expr, expr->pos_start, current_token->position.copy());
   }
 
-  std::cout << current_token->as_string() << std::endl;
   Node* expr = parse_expr();
 
   if (!current_token->matches(Token::Type::End))

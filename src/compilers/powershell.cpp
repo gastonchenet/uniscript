@@ -194,8 +194,18 @@ Value PowershellCompiler::visit(ForNode* node, int depth)
 
 Value PowershellCompiler::visit(CallNode* node, int depth)
 {
-  depth++;
-  std::string name = std::get<std::string>(node->name->value.value());
+  std::string func = std::get<std::string>(node->name->value.value());
+  std::string func_name;
+
+  if (symbol_table.find(func) != symbol_table.end())
+  {
+    func_name = symbol_table[func].content;
+  }
+  else
+  {
+    throw std::runtime_error("Function not found: " + func);
+  }
+
   std::string args = "";
 
   for (Node* arg : node->args)
@@ -204,12 +214,18 @@ Value PowershellCompiler::visit(CallNode* node, int depth)
     args += ' ' + result.content;
   }
 
-  return Value(Value::Type::String, "(" + name + args + ")");
+  std::string var = new_var();
+  output_s += std::string(depth * 2, ' ') + "$" + var + "=(" + func_name + args + ")\n";
+
+  return Value(Value::Type::String, var);
 }
 
 Value PowershellCompiler::visit(FuncdefNode* node, int depth)
 {
-  std::string name = std::get<std::string>(node->name->value.value());
+  std::string var_name = std::get<std::string>(node->name->value.value());
+  std::string var = new_var();
+  symbol_table[var_name] = Value(Value::Type::Number, var);
+
   std::string args = "";
   std::vector<const Token*> arg_names = node->args;
 
@@ -222,7 +238,7 @@ Value PowershellCompiler::visit(FuncdefNode* node, int depth)
     args += "[Parameter(Position=" + std::to_string(i) + ")]$" + var + ",";
   }
 
-  output_s += std::string(depth * 2, ' ') + "function " + name + " {\n";
+  output_s += std::string(depth * 2, ' ') + "function " + var + " {\n";
 
   if (args.size() > 0)
   {

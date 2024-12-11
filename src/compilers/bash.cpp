@@ -190,7 +190,7 @@ Value BashCompiler::visit(BlockNode* node, int depth)
 {
   for (Node* child : node->nodes)
   {
-    Value result = Compiler::visit(child, depth + 1);
+    Compiler::visit(child, depth + 1);
   }
 
   return Value();
@@ -244,7 +244,18 @@ Value BashCompiler::visit(ForNode* node, int depth)
 
 Value BashCompiler::visit(CallNode* node, int depth)
 {
-  std::string name = std::get<std::string>(node->name->value.value());
+  std::string func_name = std::get<std::string>(node->name->value.value());
+  std::string func;
+
+  if (symbol_table.find(func_name) != symbol_table.end())
+  {
+    func = symbol_table[func_name].content;
+  }
+  else
+  {
+    func = func_name;
+  }
+
   std::string args = "";
 
   for (Node* arg : node->args)
@@ -253,7 +264,10 @@ Value BashCompiler::visit(CallNode* node, int depth)
     args += ' ' + result.content;
   }
 
-  return Value(Value::Type::String, "$(" + name + args + ")");
+  std::string var = new_var();
+  output_s += std::string(depth * 2, ' ') + var + "=$(" + func_name + args + ")\n";
+
+  return Value(Value::Type::String, var);
 }
 
 Value BashCompiler::visit(FuncdefNode* node, int depth)
