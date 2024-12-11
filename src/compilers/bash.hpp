@@ -5,15 +5,17 @@
 struct BashCompiler : public Compiler
 {
 protected:
-  Value visit(NumberNode*) override;
-  Value visit(StringNode*) override;
-  Value visit(UnaryNode*) override;
-  Value visit(BinaryNode*) override;
-  Value visit(AssignNode*) override;
-  Value visit(AccessNode*) override;
-  Value visit(PutNode*) override;
-  Value visit(BlockNode*) override;
-  Value visit(IfNode*) override;
+  Value visit(NumberNode*, int) override;
+  Value visit(StringNode*, int) override;
+  Value visit(UnaryNode*, int) override;
+  Value visit(BinaryNode*, int) override;
+  Value visit(AssignNode*, int) override;
+  Value visit(AccessNode*, int) override;
+  Value visit(PutNode*, int) override;
+  Value visit(BlockNode*, int) override;
+  Value visit(IfNode*, int) override;
+  Value visit(WhileNode*, int) override;
+  Value visit(ForNode*, int) override;
 
 public:
   BashCompiler(Node*);

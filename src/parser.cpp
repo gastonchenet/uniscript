@@ -9,6 +9,8 @@
 #include "nodes/access_node.hpp"
 #include "nodes/block_node.hpp"
 #include "nodes/if_node.hpp"
+#include "nodes/while_node.hpp"
+#include "nodes/for_node.hpp"
 
 #include <iostream>
 
@@ -225,6 +227,16 @@ Node* Parser::parse_statement()
     return parse_if();
   }
 
+  if (current_token->matches(Token::Type::Keyword, "while"))
+  {
+    return parse_while();
+  }
+
+  if (current_token->matches(Token::Type::Keyword, "for"))
+  {
+    return parse_for();
+  }
+
   Node* expr = parse_expr();
 
   if (!current_token->matches(Token::Type::End))
@@ -301,4 +313,97 @@ Node* Parser::parse_if()
   }
 
   return new IfNode(condition, body, else_body, pos_start, current_token->position.copy());
+}
+
+Node* Parser::parse_while()
+{
+  if (!current_token->matches(Token::Type::Keyword, "while"))
+  {
+    throw std::runtime_error("Expected 'while' got: " + current_token->as_string());
+  }
+
+  Position pos_start = current_token->position.copy();
+  advance();
+
+  Node* condition = parse_expr();
+
+  if (!current_token->matches(Token::Type::LBrace))
+  {
+    throw std::runtime_error("Expected '{' got: " + current_token->as_string());
+  }
+
+  advance();
+
+  Node* body = parse_block();
+
+  if (!current_token->matches(Token::Type::RBrace))
+  {
+    throw std::runtime_error("Expected '}' got: " + current_token->as_string());
+  }
+
+  advance();
+
+  return new WhileNode(condition, body, pos_start, current_token->position.copy());
+}
+
+Node* Parser::parse_for()
+{
+  if (!current_token->matches(Token::Type::Keyword, "for"))
+  {
+    throw std::runtime_error("Expected 'for' got: " + current_token->as_string());
+  }
+
+  Position pos_start = current_token->position.copy();
+  advance();
+  
+  Token* var_name = nullptr;
+
+  if (current_token->matches(Token::Type::Identifier))
+  {
+    var_name = current_token;
+    advance();
+
+    if (!current_token->matches(Token::Type::Assign))
+    {
+      throw std::runtime_error("Expected '=' got: " + current_token->as_string());
+    }
+
+    advance();
+  }
+
+  Node* start = parse_expr();
+
+  if (!current_token->matches(Token::Type::Keyword, "to"))
+  {
+    throw std::runtime_error("Expected 'to' got: " + current_token->as_string());
+  }
+
+  advance();
+
+  Node* end = parse_expr();
+  Node* step = nullptr;
+
+  if (current_token->matches(Token::Type::Keyword, "step"))
+  {
+    advance();
+    step = parse_expr();
+  }
+
+  if (!current_token->matches(Token::Type::LBrace))
+  {
+    throw std::runtime_error("Expected '{' got: " + current_token->as_string());
+  }
+
+  advance();
+
+  Node* body = parse_block();
+
+  if (!current_token->matches(Token::Type::RBrace))
+  {
+    throw std::runtime_error("Expected '}' got: " + current_token->as_string());
+  }
+
+  advance();
+
+  return new ForNode(var_name, start, end, step, body, pos_start, current_token->position.copy());
 }

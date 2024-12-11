@@ -13,5 +13,5 @@ public:
   Node(Position, Position);
 
   virtual ~Node() = default;
-  virtual std::string as_string(int depth = 0) const = 0;
+  virtual std::string as_string(int = 0) const = 0;
 };

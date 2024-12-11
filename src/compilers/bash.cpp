@@ -6,12 +6,14 @@ BashCompiler::BashCompiler(Node* node) : Compiler(node) {}
 
 std::string BashCompiler::compile()
 {
-  Value result = Compiler::visit(root);
+  output_s += "#!/bin/bash\n";
+  Value result = Compiler::visit(root, -1);
   return output_s;
 }
 
-Value BashCompiler::visit(NumberNode* node)
+Value BashCompiler::visit(NumberNode* node, int depth)
 {
+  depth++;
   std::string value = std::to_string(node->value);
 
   value.erase(value.find_last_not_of('0') + 1, std::string::npos);
@@ -20,15 +22,16 @@ Value BashCompiler::visit(NumberNode* node)
   return Value(Value::Type::Number, value);
 }
 
-Value BashCompiler::visit(StringNode* node)
+Value BashCompiler::visit(StringNode* node, int depth)
 {
+  depth++;
   return Value(Value::Type::String, node->value);
 }
 
-Value BashCompiler::visit(UnaryNode* node)
+Value BashCompiler::visit(UnaryNode* node, int depth)
 {
   Token::Type op_token_type = node->op->type;
-  Value value = Compiler::visit(node->node);
+  Value value = Compiler::visit(node->node, depth);
   
   if (value.type != Value::Type::Number)
   {
@@ -45,13 +48,13 @@ Value BashCompiler::visit(UnaryNode* node)
   return Value();
 }
 
-Value BashCompiler::visit(BinaryNode* node)
+Value BashCompiler::visit(BinaryNode* node, int depth)
 {
   Node* left_n = node->left;
   Node* right_n = node->right;
 
-  Value left_v = Compiler::visit(left_n);
-  Value right_v = Compiler::visit(right_n);
+  Value left_v = Compiler::visit(left_n, depth);
+  Value right_v = Compiler::visit(right_n, depth);
 
   if (left_v.type == Value::Type::Number && right_v.type == Value::Type::Number)
   {
@@ -137,9 +140,9 @@ Value BashCompiler::visit(BinaryNode* node)
   }
 }
 
-Value BashCompiler::visit(AssignNode* node)
+Value BashCompiler::visit(AssignNode* node, int depth)
 {
-  Value result = Compiler::visit(node->right);
+  Value result = Compiler::visit(node->right, depth);
   std::string var_name = std::get<std::string>(node->left->value.value());
   std::string var;
 
@@ -153,45 +156,76 @@ Value BashCompiler::visit(AssignNode* node)
   }
 
   symbol_table[var_name] = Value(result.type, var);
-  output_s += var + "=" + result.content + "\n";
+  output_s += std::string(depth * 2, ' ') + var + "=" + result.content + "\n";
   return Value();
 }
 
-Value BashCompiler::visit(AccessNode* node)
+Value BashCompiler::visit(AccessNode* node, int depth)
 {
+  depth++;
   Value var = symbol_table[std::get<std::string>(node->token->value.value())];
   return Value(var.type, "${" + var.content + '}');
 }
 
-Value BashCompiler::visit(PutNode* node)
+Value BashCompiler::visit(PutNode* node, int depth)
 {
-  Value result = Compiler::visit(node->expr);
-  output_s += "echo \"" + result.content + "\"\n";
+  Value result = Compiler::visit(node->expr, depth);
+  output_s += std::string(depth * 2, ' ') + "echo \"" + result.content + "\"\n";
   return Value();
 }
 
-Value BashCompiler::visit(BlockNode* node)
+Value BashCompiler::visit(BlockNode* node, int depth)
 {
   for (Node* child : node->nodes)
   {
-    Value result = Compiler::visit(child);
+    Value result = Compiler::visit(child, depth + 1);
   }
 
   return Value();
 }
 
-Value BashCompiler::visit(IfNode* node)
+Value BashCompiler::visit(IfNode* node, int depth)
 {
-  Value condition = Compiler::visit(node->condition);
-  output_s += "if [ " + condition.content + " -ne 0 ]; then\n";
-  Value result = Compiler::visit(node->body);
+  Value condition = Compiler::visit(node->condition, depth);
+  output_s += std::string(depth * 2, ' ') + "if [ " + condition.content + " -ne 0 ]; then\n";
+  Value result = Compiler::visit(node->body, depth);
 
   if (node->else_body != nullptr)
   {
-    output_s += "else\n";
-    result = Compiler::visit(node->else_body);
+    output_s += std::string(depth * 2, ' ') + "else\n";
+    result = Compiler::visit(node->else_body, depth);
   }
 
-  output_s += "fi\n";
+  output_s += std::string(depth * 2, ' ') + "fi\n";
+  return Value();
+}
+
+Value BashCompiler::visit(WhileNode* node, int depth)
+{
+  Value condition = Compiler::visit(node->condition, depth);
+  output_s += std::string(depth * 2, ' ') + "while [ " + condition.content + " -ne 0 ]; do\n";
+  Value result = Compiler::visit(node->body, depth);
+  output_s += std::string(depth * 2, ' ') + "done\n";
+  return Value();
+}
+
+Value BashCompiler::visit(ForNode* node, int depth)
+{
+  Value start = Compiler::visit(node->start, depth);
+  Value end = Compiler::visit(node->end, depth);
+  Value step = node->step != nullptr ? Compiler::visit(node->step, depth) : Value(Value::Type::Number, "1");
+
+  std::string var = new_var();
+
+  if (node->var_name != nullptr)
+  {
+    std::string var_name = std::get<std::string>(node->var_name->value.value());
+    symbol_table[var_name] = Value(Value::Type::Number, var);
+  }
+
+  output_s += std::string(depth * 2, ' ') + "for " + var + " in $(seq " + start.content + " " + step.content + " " + end.content + "); do\n";
+  Value result = Compiler::visit(node->body, depth);
+  output_s += std::string(depth * 2, ' ') + "done\n";
+
   return Value();
 }

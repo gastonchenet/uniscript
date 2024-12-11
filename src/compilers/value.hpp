@@ -14,7 +14,7 @@ struct Value
   Type type;
   std::string content;
 
-  Value(Type type, std::string content);
-  Value(Type type);
+  Value(Type, std::string);
+  Value(Type);
   Value();
 };

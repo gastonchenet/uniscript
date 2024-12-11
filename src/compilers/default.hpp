@@ -15,6 +15,8 @@
 #include "../nodes/access_node.hpp"
 #include "../nodes/block_node.hpp"
 #include "../nodes/if_node.hpp"
+#include "../nodes/while_node.hpp"
+#include "../nodes/for_node.hpp"
 
 struct Compiler
 {
@@ -24,20 +26,22 @@ protected:
   std::string output_s;
   std::map<std::string, Value> symbol_table;
 
-  Compiler(Node* root);
+  Compiler(Node*);
 
-  Value visit(Node*);
+  Value visit(Node*, int);
   std::string new_var();
 
-  virtual Value visit(NumberNode*) = 0;
-  virtual Value visit(StringNode*) = 0;
-  virtual Value visit(UnaryNode*) = 0;
-  virtual Value visit(BinaryNode*) = 0;
-  virtual Value visit(AssignNode*) = 0;
-  virtual Value visit(AccessNode*) = 0;
-  virtual Value visit(PutNode*) = 0;
-  virtual Value visit(BlockNode*) = 0;
-  virtual Value visit(IfNode*) = 0;
+  virtual Value visit(NumberNode*, int) = 0;
+  virtual Value visit(StringNode*, int) = 0;
+  virtual Value visit(UnaryNode*, int) = 0;
+  virtual Value visit(BinaryNode*, int) = 0;
+  virtual Value visit(AssignNode*, int) = 0;
+  virtual Value visit(AccessNode*, int) = 0;
+  virtual Value visit(PutNode*, int) = 0;
+  virtual Value visit(BlockNode*, int) = 0;
+  virtual Value visit(IfNode*, int) = 0;
+  virtual Value visit(WhileNode*, int) = 0;
+  virtual Value visit(ForNode*, int) = 0;
 
 public:
   virtual ~Compiler() = default;

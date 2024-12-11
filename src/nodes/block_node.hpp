@@ -11,5 +11,5 @@ public:
 
   BlockNode(std::vector<Node*>, Position, Position);
 
-  std::string as_string(int depth = 0) const override;
+  std::string as_string(int = 0) const override;
 };
