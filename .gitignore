@@ -1,6 +1,7 @@
 .vscode
 build
 main
+uni
 *.us
 *.sh
 *.ps1

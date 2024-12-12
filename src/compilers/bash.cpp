@@ -1,6 +1,6 @@
 #include "bash.hpp"
 
-#include <iostream>
+#include <stdexcept>
 
 BashCompiler::BashCompiler(Node* node) : Compiler(node) {}
 
@@ -174,11 +174,11 @@ Value BashCompiler::visit(AccessNode* node, int depth)
 Value BashCompiler::visit(PutNode* node, int depth)
 {
   Value result = Compiler::visit(node->expr, depth);
-  output_s += std::string(depth * 2, ' ') + "echo " + result.content;
+  output_s += std::string(depth * 2, ' ') + "echo -e " + result.content;
 
   if (depth > 0)
   {
-    output_s += " >&2";
+    output_s += ">&2";
   }
 
   output_s += "\n";
@@ -194,7 +194,12 @@ Value BashCompiler::visit(BlockNode* node, int depth)
 
     if (dynamic_cast<CallNode*>(child) != nullptr)
     {
-      output_s += result.content + "\n";
+      std::string func_name = result.content;
+
+      func_name.erase(0, 2);
+      func_name.erase(func_name.size() - 1, 1);
+
+      output_s += func_name + ">/dev/null\n";
     }
   }
 
@@ -269,13 +274,22 @@ Value BashCompiler::visit(CallNode* node, int depth)
     args += ' ' + result.content;
   }
 
-  return Value(Value::Type::Number, "$(" + func_name + args + ")");
+  return Value(Value::Type::Number, "$(" + func + args + ")");
 }
 
 Value BashCompiler::visit(FuncdefNode* node, int depth)
 {
   std::string name = std::get<std::string>(node->name->value.value());
-  output_s += name + "() {\n";
+
+  if (symbol_table.find(name) != symbol_table.end())
+  {
+    throw std::runtime_error("Function already defined: " + name);
+  }
+
+  std::string func = new_var();
+  symbol_table[name] = Value(Value::Type::Number, func);
+
+  output_s += func + "() {\n";
   
   std::vector<const Token*> args = node->args;
   std::string tab = std::string((depth + 1) * 2, ' ');
@@ -312,6 +326,6 @@ Value BashCompiler::visit(ContinueNode* node, int depth)
 Value BashCompiler::visit(ReturnNode* node, int depth)
 {
   Value result = Compiler::visit(node->node, depth);
-  output_s += std::string(depth * 2, ' ') + "echo " + result.content + "\n" + std::string(depth * 2, ' ') + "exit\n";
+  output_s += std::string(depth * 2, ' ') + "echo -e " + result.content + "\n" + std::string(depth * 2, ' ') + "return 0\n";
   return Value();
 }

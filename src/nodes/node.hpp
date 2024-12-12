@@ -2,7 +2,7 @@
 
 #include <string>
 
-#include "position.hpp"
+#include "../position.hpp"
 
 struct Node
 {
