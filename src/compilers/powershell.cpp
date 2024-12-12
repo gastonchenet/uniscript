@@ -143,9 +143,14 @@ Value PowershellCompiler::visit(PutNode* node, int depth)
 
 Value PowershellCompiler::visit(BlockNode* node, int depth)
 {
-  for (Node* statement : node->nodes)
+  for (Node* child : node->nodes)
   {
-    Compiler::visit(statement, depth + 1);
+    Value result = Compiler::visit(child, depth + 1);
+
+    if (dynamic_cast<CallNode*>(child) != nullptr)
+    {
+      output_s += result.content + "\n";
+    }
   }
 
   return Value();
@@ -214,10 +219,7 @@ Value PowershellCompiler::visit(CallNode* node, int depth)
     args += ' ' + result.content;
   }
 
-  std::string var = new_var();
-  output_s += std::string(depth * 2, ' ') + "$" + var + "=(" + func_name + args + ")\n";
-
-  return Value(Value::Type::String, var);
+  return Value(Value::Type::String, "(" + func_name + args + ")");
 }
 
 Value PowershellCompiler::visit(FuncdefNode* node, int depth)
