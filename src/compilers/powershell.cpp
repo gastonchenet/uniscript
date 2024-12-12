@@ -137,7 +137,7 @@ Value PowershellCompiler::visit(AccessNode* node, int depth)
 Value PowershellCompiler::visit(PutNode* node, int depth)
 {
   Value result = Compiler::visit(node->expr, depth);
-  output_s += std::string(depth * 2, ' ') + "Write-Output " + result.content + "\n";
+  output_s += std::string(depth * 2, ' ') + result.content + "|Out-Host\n";
   return Value();
 }
 
@@ -149,7 +149,7 @@ Value PowershellCompiler::visit(BlockNode* node, int depth)
 
     if (dynamic_cast<CallNode*>(child) != nullptr)
     {
-      output_s += result.content + "\n";
+      output_s += "[void]" + result.content + "\n";
     }
   }
 
@@ -273,4 +273,20 @@ Value PowershellCompiler::visit(ReturnNode* node, int depth)
   Value result = Compiler::visit(node->node, depth);
   output_s += std::string(depth * 2, ' ') + "return " + result.content + "\n";
   return Value();
+}
+
+Value PowershellCompiler::visit(ListNode* node, int depth)
+{
+  std::string result = "(";
+
+  for (Node* element : node->elements)
+  {
+    Value value = Compiler::visit(element, depth);
+    result += value.content + ',';
+  }
+
+  result.pop_back();
+  result += ')';
+
+  return Value(Value::Type::List, result);
 }

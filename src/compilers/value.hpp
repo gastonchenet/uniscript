@@ -8,7 +8,8 @@ struct Value
   {
     Number,
     String,
-    Void
+    Void,
+    List,
   };
 
   Type type;

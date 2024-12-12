@@ -32,6 +32,7 @@ Value Compiler::visit(Node* node, int depth)
   if (auto breakNode = dynamic_cast<BreakNode*>(node))       return visit(breakNode, depth);
   if (auto continueNode = dynamic_cast<ContinueNode*>(node)) return visit(continueNode, depth);
   if (auto returnNode = dynamic_cast<ReturnNode*>(node))     return visit(returnNode, depth);
+  if (auto listNode = dynamic_cast<ListNode*>(node))         return visit(listNode, depth);
 
   throw std::runtime_error("Unknown node type");
 }

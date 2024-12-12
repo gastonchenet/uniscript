@@ -28,6 +28,7 @@ private:
   Node* parse_arith();
   Node* parse_comp();
   Node* parse_expr();
+  Node* parse_list();
   Node* parse_statement();
   Node* parse_block();
   Node* parse_if();

@@ -329,3 +329,20 @@ Value BashCompiler::visit(ReturnNode* node, int depth)
   output_s += std::string(depth * 2, ' ') + "echo -e " + result.content + "\n" + std::string(depth * 2, ' ') + "return 0\n";
   return Value();
 }
+
+Value BashCompiler::visit(ListNode* node, int depth)
+{
+  depth++;
+  std::string result = "(";
+
+  for (Node* element : node->elements)
+  {
+    Value value = Compiler::visit(element, depth);
+    result += value.content + ' ';
+  }
+
+  result.pop_back();
+  result += ')';
+
+  return Value(Value::Type::List, result);
+}

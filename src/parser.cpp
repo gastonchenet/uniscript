@@ -16,6 +16,7 @@
 #include "nodes/return_node.hpp"
 #include "nodes/break_node.hpp"
 #include "nodes/continue_node.hpp"
+#include "nodes/list_node.hpp"
 
 #include <iostream>
 
@@ -114,6 +115,10 @@ Node* Parser::parse_atom()
     }
 
     return new AccessNode(var_name, var_name->position.copy(), current_token->position.copy());
+  }
+  else if (current_token->matches(Token::Type::LBrace))
+  {
+    return parse_list();
   }
   else
   {
@@ -242,6 +247,38 @@ Node* Parser::parse_expr()
   }
 
   return left;
+}
+
+Node* Parser::parse_list()
+{
+  if (!current_token->matches(Token::Type::LBrace))
+  {
+    throw std::runtime_error("Expected '{' got: " + current_token->as_string());
+  }
+
+  Position pos_start = current_token->position.copy();
+  advance();
+
+  std::vector<Node*> elements;
+
+  while (!current_token->matches(Token::Type::RBrace))
+  {
+    Node* element = parse_expr();
+    elements.push_back(element);
+
+    if (current_token->matches(Token::Type::Comma))
+    {
+      advance();
+    }
+    else if (!current_token->matches(Token::Type::RBrace))
+    {
+      throw std::runtime_error("Expected '}' or ',' got: " + current_token->as_string());
+    }
+  }
+
+  advance();
+
+  return new ListNode(elements, pos_start, current_token->position.copy());
 }
 
 Node* Parser::parse_statement()

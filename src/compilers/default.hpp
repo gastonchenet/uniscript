@@ -22,6 +22,7 @@
 #include "../nodes/break_node.hpp"
 #include "../nodes/continue_node.hpp"
 #include "../nodes/return_node.hpp"
+#include "../nodes/list_node.hpp"
 
 struct Compiler
 {
@@ -52,6 +53,7 @@ protected:
   virtual Value visit(BreakNode*, int) = 0;
   virtual Value visit(ContinueNode*, int) = 0;
   virtual Value visit(ReturnNode*, int) = 0;
+  virtual Value visit(ListNode*, int) = 0;
 
 public:
   virtual ~Compiler() = default;

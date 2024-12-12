@@ -21,6 +21,7 @@ protected:
   Value visit(BreakNode*, int) override;
   Value visit(ContinueNode*, int) override;
   Value visit(ReturnNode*, int) override;
+  Value visit(ListNode*, int) override;
 
 public:
   PowershellCompiler(Node*);
